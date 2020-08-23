@@ -1,0 +1,59 @@
+from django.shortcuts import render, get_object_or_404
+from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
+from django.urls import reverse, reverse_lazy
+from django.views import generic
+from groups.models import Group, GroupMember
+from django.db import IntegrityError
+from django.contrib import messages
+
+
+# Create your views here.
+class CreateGroup(LoginRequiredMixin, generic.CreateView):
+    fields = ('name', 'description')
+    model = Group
+
+
+class SingleGroup(generic.DetailView):
+    model = Group
+
+
+class ListGroup(generic.ListView):
+    model = Group
+
+
+class JoinGroup(LoginRequiredMixin, generic.RedirectView):
+
+    def get_redirect_url(self, *args, **kwargs):
+        return reverse('groups:single', kwargs={'slug': self.kwargs.get('slug')})
+
+    def get(self, request, *args, **kwargs):
+        group = get_object_or_404(Group, slug=self.kwargs.get('slug'))
+
+        try:
+            GroupMember.objects.create(user=self.request.user, group=group)
+        # if the user has already joined the group then it will show integrity error/
+        # you can also skip this, then the except will then catch any error that will occur
+        except IntegrityError:
+            messages.warning(self.request, ("Warning you're already member of {}".format(group.name)))
+        else:
+            messages.success(self.request, ("You're are now a member of {} group".format(group.name)))
+
+        return super().get(request, *args, **kwargs)
+
+
+class LeaveGroup(LoginRequiredMixin, generic.RedirectView):
+
+    def get_redirect_url(self, *args, **kwargs):
+        return reverse("groups:single", kwargs={"slug": self.kwargs.get("slug")})
+
+    def get(self, request, *args, **kwargs):
+        try:
+            # we are trying to get the group that the user wish to leave
+            membership = GroupMember.objects.filter(user=self.request.user, group__slug=self.kwargs.get("slug")).get()
+        except GroupMember.DoesNotExist:
+            messages.warning(self.request, "You can't leave this group because you aren't in it.")
+        else:
+            membership.delete()
+            messages.success(
+                self.request, "You have successfully left this group.")
+        return super().get(request, *args, **kwargs)

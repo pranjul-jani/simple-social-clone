@@ -1,0 +1,26 @@
+<!-- This will be used to inject into other post templates -->
+<!-- we do not extend it to post_base since it does not need to extend to a whole page -->
+<div class="media">
+	<h3 class="mr-5"><a href="{% url 'posts:for_user' username=post.user.username %}">@{{ post.user.username }}</a></h3>
+
+	<div class="media-body">
+        <strong>Author : <a href="{% url 'posts:single' username=post.user.username pk=post.pk %}">{{ post.user.username }}</a></strong>
+		<h5>{{ post.message_html|safe }}</h5>
+			<time class="time">{{ post.created_at }}</time>
+			{% if post.group %}
+			<span class="group-name">in <a href="{% url 'groups:single' slug=post.group.slug %}">{{ post.group.name }}</a></span>
+			{% endif %}
+		</h5>
+
+		<div class="media-footer">
+            <!-- if a user is authenticated and he is the author of the current then only he can delete it -->
+			{% if user.is_authenticated and post.user == user and not hide_delete %}
+				<a href="{% url 'posts:delete' pk=post.pk %}" title="delete" class="btn btn-simple">
+                    <!-- aria hidden is for people with disability so that they can hover the mouse over a element to listen what it is -->
+					<span class="fa fa-remove text-danger" aria-hidden="true"></span>
+					<span class="text-danger icon-label">Delete</span>
+				</a>
+			{% endif %}
+		</div>
+	</div>
+</div>
